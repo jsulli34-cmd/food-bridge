@@ -3,12 +3,12 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebas
 
 // Replace these with your Firebase Web App config values.
 const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME",
+  apiKey: "AIzaSyCuyDaad9c8dUzoz4khAkps2BnmboAvNOU",
+  authDomain: "food-bridge-beta.firebaseapp.com",
+  projectId: "food-bridge-beta",
+  storageBucket: "food-bridge-beta.firebasestorage.app",
+  messagingSenderId: "910553294033",
+  appId: "1:910553294033:web:8f28fcc74027fad3d111f0"
 };
 
 export const isFirebaseConfigured =
