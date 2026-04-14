@@ -1,6 +1,6 @@
 ﻿# South Bend Food Bridge — beta prototype
 
-Static web beta for a food-bank / pantry / donor communication platform. It runs without a backend so you can deploy quickly to GitHub + Vercel for class review.
+Static web beta for a food-bank / pantry / donor communication platform. It runs as a static site and now supports shared messaging through Firebase Firestore.
 
 ## Beta improvements this week
 
@@ -13,9 +13,32 @@ Static web beta for a food-bank / pantry / donor communication platform. It runs
 
 ## Feature boundaries (for class beta)
 
-- No login or backend yet.
-- Status and messages are saved in browser localStorage only.
+- No login/auth yet.
+- Map status updates are saved in browser localStorage only.
 - No SMS/push notifications.
+
+## Firebase setup for shared messages (no auth)
+
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Add a **Web App** in Project Settings and copy the config object values.
+3. In this repo, open `js/firebase-config.js` and replace all `REPLACE_ME` values.
+4. In Firebase Console, create a **Cloud Firestore** database (start in production mode).
+5. Add these Firestore rules for simple class demo use:
+
+```txt
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /messages/{messageId} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+6. Deploy/push. Messages will now sync across browsers/devices in realtime.
+
+Important: these rules are intentionally open for prototype speed. Lock them down before any public/real deployment.
 
 ## Run locally
 

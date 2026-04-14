@@ -1,5 +1,15 @@
-﻿const ROLE_KEY = "food-bridge-role";
-const MSGS_KEY = "food-bridge-direct-messages-v2";
+﻿import {
+  addDoc,
+  collection,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { db, isFirebaseConfigured } from "./firebase-config.js";
+
+const ROLE_KEY = "food-bridge-role";
 const STATUS_KEY = "food-bridge-status-overrides-v2";
 
 const TYPE_LABELS = {
@@ -34,6 +44,7 @@ const state = {
   map: /** @type {L.Map | null} */ (null),
   statusById: /** @type {Record<string, keyof STATUS_META>} */ ({}),
   msgView: /** @type {'inbox' | 'sent' | 'all'} */ ("inbox"),
+  messages: /** @type {Array<{from: string; to: string; text: string; locationId: string; locationName: string; createdAt?: any}>} */ ([]),
 };
 
 function loadRole() {
@@ -61,20 +72,6 @@ function saveStatusOverrides() {
 
 function effectiveStatus(loc) {
   return state.statusById[loc.id] || loc.status || "medium";
-}
-
-function loadMessages() {
-  try {
-    const raw = localStorage.getItem(MSGS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveMessages(msgs) {
-  localStorage.setItem(MSGS_KEY, JSON.stringify(msgs));
 }
 
 function roleLabel(role) {
@@ -330,7 +327,7 @@ function messageVisibleForRole(msg) {
 
 function renderMessages() {
   const thread = document.getElementById("messages-thread");
-  const msgs = loadMessages().filter(messageVisibleForRole);
+  const msgs = state.messages.filter(messageVisibleForRole);
   thread.innerHTML = "";
 
   if (msgs.length === 0) {
@@ -342,12 +339,21 @@ function renderMessages() {
     const div = document.createElement("div");
     div.className = "msg";
     const location = m.locationName ? ` · Regarding: ${escapeHtml(m.locationName)}` : "";
+    const time = formatMessageTime(m.createdAt);
     div.innerHTML = `
-      <div class="from">${escapeHtml(roleLabel(m.from))} -> ${escapeHtml(roleLabel(m.to))} · ${escapeHtml(m.time)}</div>
+      <div class="from">${escapeHtml(roleLabel(m.from))} -> ${escapeHtml(roleLabel(m.to))} · ${escapeHtml(time)}</div>
       <div>${escapeHtml(m.text)}</div>
       <div class="subject">${location || "General message"}</div>
     `;
     thread.appendChild(div);
+  });
+}
+
+function formatMessageTime(createdAt) {
+  if (!createdAt || typeof createdAt.toDate !== "function") return "just now";
+  return createdAt.toDate().toLocaleString(undefined, {
+    dateStyle: "short",
+    timeStyle: "short",
   });
 }
 
@@ -377,26 +383,29 @@ function populateMessageLocations() {
   if ([...select.options].some((o) => o.value === current)) select.value = current;
 }
 
-function postMessage() {
+async function postMessage() {
   const to = document.getElementById("msg-to").value;
   const locationId = document.getElementById("msg-location").value;
   const textArea = document.getElementById("msg-body");
   const text = textArea.value.trim();
   if (!to || !text) return;
+  if (!isFirebaseConfigured) return;
 
   const loc = dataset.locations.find((x) => x.id === locationId);
-  const msgs = loadMessages();
-  msgs.unshift({
-    from: state.role,
-    to,
-    text,
-    locationId: loc ? loc.id : "",
-    locationName: loc ? loc.name : "",
-    time: new Date().toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }),
-  });
-  saveMessages(msgs.slice(0, 80));
-  textArea.value = "";
-  renderMessages();
+  try {
+    await addDoc(collection(db, "messages"), {
+      from: state.role,
+      to,
+      text,
+      locationId: loc ? loc.id : "",
+      locationName: loc ? loc.name : "",
+      createdAt: serverTimestamp(),
+    });
+    textArea.value = "";
+  } catch (error) {
+    console.error(error);
+    alert("Message send failed. Check Firebase config/rules.");
+  }
 }
 
 function setupMessageViewButtons() {
@@ -458,6 +467,31 @@ function setupRoleSwitch() {
   });
 }
 
+function setupMessageRealtime() {
+  const intro = document.getElementById("msg-intro");
+  const sendBtn = document.getElementById("msg-send");
+
+  if (!isFirebaseConfigured) {
+    intro.textContent =
+      "Firebase is not configured yet. Add your keys in js/firebase-config.js to enable shared messaging.";
+    sendBtn.disabled = true;
+    return;
+  }
+
+  const q = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(200));
+  onSnapshot(
+    q,
+    (snap) => {
+      state.messages = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      renderMessages();
+    },
+    (error) => {
+      console.error(error);
+      intro.textContent = "Could not load shared messages. Check Firebase rules.";
+    }
+  );
+}
+
 async function main() {
   const res = await fetch("data/locations.json");
   if (!res.ok) throw new Error("Failed to load locations");
@@ -478,6 +512,7 @@ async function main() {
   setupMessageViewButtons();
   refreshMessageRoleOptions();
   populateMessageLocations();
+  setupMessageRealtime();
 
   document.getElementById("msg-send").addEventListener("click", postMessage);
 
