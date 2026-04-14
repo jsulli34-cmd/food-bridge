@@ -1,33 +1,37 @@
-# South Bend Food Bridge — class prototype
+﻿# South Bend Food Bridge — beta prototype
 
-Static web prototype for a food-bank / pantry / donor coordination app. No build step, no paid APIs: map tiles from [OpenStreetMap](https://www.openstreetmap.org/), markers and data from local JSON.
+Static web beta for a food-bank / pantry / donor communication platform. It runs without a backend so you can deploy quickly to GitHub + Vercel for class review.
 
-## What’s included
+## Beta improvements this week
 
-- **Roles:** Donor, Organization, Neighbor in need (changes hint text and sample **Alerts**).
-- **Map:** South Bend area with filterable location types (pantry, food hub, meals, redistribution).
-- **Place details:** Address, hours, website link, phone, wishlist, notes (all demo copy — replace with real partners later).
-- **Alerts:** Mock lines only (not real-time; swap for a backend or SMS later if the course allows).
-- **Messages:** Simple bulletin stored in `localStorage` in this browser (for demo coordination; not shared between users).
+- Replaced placeholder organizations with real South Bend-area partners (still mark hours as verify before public release).
+- Added **need status levels** per organization: `Critical`, `High`, `Moderate`, `Stable`.
+- Updated map markers to reflect need status colors.
+- Added organization-side status controls in the place detail panel (local demo state).
+- Upgraded messaging from one bulletin board to role-to-role direct messages (`Donor`, `Organization`, `Neighbor in need`) with inbox/sent/all views.
+- Alerts are now generated from current status + role rather than fixed text.
+
+## Feature boundaries (for class beta)
+
+- No login or backend yet.
+- Status and messages are saved in browser localStorage only.
+- No SMS/push notifications.
 
 ## Run locally
 
-Browsers often block `fetch()` to `data/locations.json` when you open `index.html` as a file. Use any static server from the **repo root** (this folder), for example:
+- VS Code/Cursor Live Preview or Live Server, or
+- `python -m http.server 8080` then open `http://localhost:8080`.
 
-- **VS Code / Cursor:** “Live Preview” or “Live Server” on `index.html`.
-- **Python:** `python -m http.server 8080` then open `http://localhost:8080`.
+## Deploy to GitHub + Vercel
 
-## Deploy on Vercel + GitHub
+1. Commit and push to your GitHub repo.
+2. In Vercel, import repo `jsulli34-cmd/food-bridge`.
+3. Root directory: repo root. Build command: none. Framework: Other/static.
+4. Deploy.
 
-Treat **this folder as the whole repository** (do not nest it inside a parent repo unless you change Vercel’s root).
+## Suggested testing scenarios
 
-1. Create a new GitHub repository and push **only the contents of this project** (the files next to this README).
-2. In [Vercel](https://vercel.com), **Add New Project** → import that repo.
-3. Leave **Root Directory** empty (repo root). Framework: **Other** (static). No build command.
-4. Deploy. The app should load with the map and data.
-
-## Next steps for your team
-
-- Replace demo locations in `data/locations.json` with verified South Bend organizations and accurate coordinates.
-- Add a real auth + database for shared alerts and messages when you’re ready.
-- Optional later: Next.js or another framework if you want components, APIs, and easier team workflows.
+- Switch each role and confirm alerts/messages change.
+- As Organization, update a location status and confirm map/list colors update.
+- Send a message from Donor to Organization, switch roles, and confirm it appears in inbox.
+- Filter locations by type and confirm map/list sync.

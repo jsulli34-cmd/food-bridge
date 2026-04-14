@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>South Bend Food Bridge — Prototype</title>
+    <title>South Bend Food Bridge — Beta</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -16,15 +16,12 @@
     <header class="app-header">
       <h1>South Bend Food Bridge</h1>
       <p class="tagline">
-        Prototype: connect donors, organizations, and neighbors — map, needs, and simple
-        messages (demo data).
+        Beta: verified South Bend partners, need-status map signals, and role-to-role messaging.
       </p>
       <div class="role-bar" role="group" aria-label="I am using this app as">
         <span>I am</span>
         <button type="button" class="role-btn" data-role="donor">A donor</button>
-        <button type="button" class="role-btn" data-role="organization">
-          An organization
-        </button>
+        <button type="button" class="role-btn" data-role="organization">An organization</button>
         <button type="button" class="role-btn" data-role="need">In need of food</button>
       </div>
     </header>
@@ -32,15 +29,9 @@
     <div class="layout">
       <aside class="panel">
         <div class="panel-tabs" role="tablist">
-          <button type="button" class="active" data-tab="places" role="tab" aria-selected="true">
-            Places
-          </button>
-          <button type="button" data-tab="alerts" role="tab" aria-selected="false">
-            Alerts
-          </button>
-          <button type="button" data-tab="messages" role="tab" aria-selected="false">
-            Messages
-          </button>
+          <button type="button" class="active" data-tab="places" role="tab" aria-selected="true">Places</button>
+          <button type="button" data-tab="alerts" role="tab" aria-selected="false">Alerts</button>
+          <button type="button" data-tab="messages" role="tab" aria-selected="false">Messages</button>
         </div>
         <div class="panel-body">
           <div id="tab-places" class="tab-panel active" role="tabpanel">
@@ -51,33 +42,45 @@
               <p class="empty-state">Select a location on the list or map.</p>
             </div>
           </div>
+
           <div id="tab-alerts" class="tab-panel" role="tabpanel" hidden>
             <ul class="alerts-list" id="alerts-list"></ul>
           </div>
+
           <div id="tab-messages" class="tab-panel" role="tabpanel" hidden>
             <p class="empty-state" id="msg-intro">
-              Demo bulletin: messages stay in this browser only until you refresh.
+              Beta inbox: direct messages are filtered by your selected role and stored locally.
             </p>
+            <div class="msg-toolbar" id="msg-toolbar">
+              <button type="button" class="chip on" data-view="inbox">Inbox</button>
+              <button type="button" class="chip" data-view="sent">Sent</button>
+              <button type="button" class="chip" data-view="all">All</button>
+            </div>
             <div class="messages" id="messages-thread"></div>
             <div class="compose">
+              <label for="msg-to">Send to</label>
+              <select id="msg-to"></select>
+
+              <label for="msg-location">Regarding location (optional)</label>
+              <select id="msg-location">
+                <option value="">General / all locations</option>
+              </select>
+
               <label for="msg-body" class="sr-only">Message</label>
-              <textarea
-                id="msg-body"
-                placeholder="Share a pickup time, volunteer offer, or question for pantries (prototype)…"
-              ></textarea>
-              <button type="button" id="msg-send">Post to bulletin</button>
+              <textarea id="msg-body" placeholder="Share a pickup plan, ask for availability, or coordinate volunteers..."></textarea>
+              <button type="button" id="msg-send">Send message</button>
             </div>
           </div>
         </div>
       </aside>
+
       <main class="map-wrap">
         <div id="map" role="application" aria-label="Map of South Bend food locations"></div>
       </main>
     </div>
 
     <footer class="note">
-      Class prototype — locations and alerts are illustrative. Replace with verified South Bend
-      partners before any public use. No accounts or server: data is local / static JSON.
+      Beta for class testing — partner details are real organizations but hours and contacts should still be re-verified before public release.
     </footer>
 
     <style>
