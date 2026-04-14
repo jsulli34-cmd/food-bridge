@@ -45,7 +45,16 @@ const state = {
   statusById: /** @type {Record<string, keyof STATUS_META>} */ ({}),
   msgView: /** @type {'inbox' | 'sent' | 'all'} */ ("inbox"),
   messages: /** @type {Array<{from: string; to: string; text: string; locationId: string; locationName: string; createdAt?: any}>} */ ([]),
+  sendingMessage: false,
 };
+
+function setMessageStatus(text, tone = "") {
+  const el = document.getElementById("msg-status");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("error", "ok");
+  if (tone) el.classList.add(tone);
+}
 
 function loadRole() {
   const val = sessionStorage.getItem(ROLE_KEY);
@@ -384,14 +393,29 @@ function populateMessageLocations() {
 }
 
 async function postMessage() {
+  if (state.sendingMessage) return;
   const to = document.getElementById("msg-to").value;
   const locationId = document.getElementById("msg-location").value;
   const textArea = document.getElementById("msg-body");
+  const sendBtn = document.getElementById("msg-send");
   const text = textArea.value.trim();
-  if (!to || !text) return;
-  if (!isFirebaseConfigured) return;
+  if (!to) {
+    setMessageStatus("Pick a recipient role before sending.", "error");
+    return;
+  }
+  if (!text) {
+    setMessageStatus("Type a message before sending.", "error");
+    return;
+  }
+  if (!isFirebaseConfigured) {
+    setMessageStatus("Firebase is not configured in this deployment.", "error");
+    return;
+  }
 
   const loc = dataset.locations.find((x) => x.id === locationId);
+  state.sendingMessage = true;
+  sendBtn.disabled = true;
+  setMessageStatus("Sending message...", "");
   try {
     await addDoc(collection(db, "messages"), {
       from: state.role,
@@ -402,9 +426,13 @@ async function postMessage() {
       createdAt: serverTimestamp(),
     });
     textArea.value = "";
+    setMessageStatus("Message sent.", "ok");
   } catch (error) {
     console.error(error);
-    alert("Message send failed. Check Firebase config/rules.");
+    setMessageStatus("Message send failed. Check Firestore rules and browser console.", "error");
+  } finally {
+    state.sendingMessage = false;
+    sendBtn.disabled = false;
   }
 }
 
@@ -475,6 +503,7 @@ function setupMessageRealtime() {
     intro.textContent =
       "Firebase is not configured yet. Add your keys in js/firebase-config.js to enable shared messaging.";
     sendBtn.disabled = true;
+    setMessageStatus("Messaging disabled until Firebase is configured.", "error");
     return;
   }
 
@@ -488,6 +517,7 @@ function setupMessageRealtime() {
     (error) => {
       console.error(error);
       intro.textContent = "Could not load shared messages. Check Firebase rules.";
+      setMessageStatus("Could not read messages from Firestore.", "error");
     }
   );
 }

@@ -212,6 +212,10 @@ header.app-header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
   font-size: 0.85rem;
   cursor: pointer;
 }
+.compose button:disabled { opacity: 0.6; cursor: not-allowed; }
+.msg-status { margin: 0.15rem 0 0; font-size: 0.78rem; }
+.msg-status.error { color: #b91c1c; }
+.msg-status.ok { color: #166534; }
 
 .empty-state { font-size: 0.85rem; color: var(--muted); }
 footer.note { font-size: 0.72rem; color: var(--muted); padding: 0.5rem 1.25rem 1rem; }
