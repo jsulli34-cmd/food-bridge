@@ -16,6 +16,19 @@
       "notes": "Regional distribution partner. Donor drop-offs should call ahead."
     },
     {
+      "id": "cultivate-food-rescue",
+      "name": "Cultivate Food Rescue",
+      "type": "redistribution",
+      "address": "1403 Prairie Ave, South Bend, IN 46613",
+      "coords": [41.6596, -86.2641],
+      "hours": "Warehouse and volunteer shifts vary; check site or call before visiting",
+      "website": "https://cultivatefoodrescue.com/",
+      "phone": "(877) 725-2016",
+      "status": "high",
+      "wishlist": ["Refrigerated delivery volunteers", "Food donors (retail/restaurant)", "Meal packaging help"],
+      "notes": "Rescues surplus food across northern Indiana and distributes meals and staples to schools, pantries, and shelters."
+    },
+    {
       "id": "broadway-pantry",
       "name": "Broadway Christian Parish Pantry",
       "type": "pantry",
