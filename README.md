@@ -7,14 +7,14 @@ Static web beta for a food-bank / pantry / donor communication platform. It runs
 - Replaced placeholder organizations with real South Bend-area partners (still mark hours as verify before public release).
 - Added **need status levels** per organization: `Critical`, `High`, `Moderate`, `Stable`.
 - Updated map markers to reflect need status colors.
-- Added organization-side status controls in the place detail panel (local demo state).
+- Added organization-side **need status** and **wishlist** controls in the place detail panel; with Firebase configured, both sync in realtime for all visitors (same Firestore pattern as Messages).
 - Upgraded messaging from one bulletin board to role-to-role direct messages (`Donor`, `Organization`, `Neighbor in need`) with inbox/sent/all views.
 - Alerts are now generated from current status + role rather than fixed text.
 
 ## Feature boundaries (for class beta)
 
 - No login/auth yet.
-- Map status updates are saved in browser localStorage only.
+- Map **need status** uses browser localStorage only when Firebase is not configured; with Firebase, status and wishlist overrides live in Firestore (`settings/locationOverrides`) and update everyone live.
 - No SMS/push notifications.
 
 ## Firebase setup for shared messages (no auth)
@@ -32,11 +32,14 @@ service cloud.firestore {
     match /messages/{messageId} {
       allow read, write: if true;
     }
+    match /settings/locationOverrides {
+      allow read, write: if true;
+    }
   }
 }
 ```
 
-6. Deploy/push. Messages will now sync across browsers/devices in realtime.
+6. Deploy/push. Messages, need status, and wishlists will sync across browsers/devices in realtime.
 
 Important: these rules are intentionally open for prototype speed. Lock them down before any public/real deployment.
 

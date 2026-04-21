@@ -202,6 +202,35 @@ header.app-header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
   background: #fff;
 }
 .compose textarea { min-height: 72px; resize: vertical; }
+
+.wishlist-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.wishlist-edit label { font-size: 0.78rem; color: var(--muted); }
+.wishlist-edit textarea {
+  min-height: 96px;
+  resize: vertical;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+}
+.wishlist-edit button {
+  align-self: flex-start;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.wishlist-edit button:disabled { opacity: 0.6; cursor: not-allowed; }
 .compose button {
   align-self: flex-start;
   background: var(--accent);

@@ -1,16 +1,21 @@
 ﻿import {
   addDoc,
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { db, isFirebaseConfigured } from "./firebase-config.js";
 
 const ROLE_KEY = "food-bridge-role";
 const STATUS_KEY = "food-bridge-status-overrides-v2";
+
+/** Shared need + wishlist overrides (one doc, same pattern as messages collection). */
+const LOCATION_OVERRIDES = ["settings", "locationOverrides"];
 
 const TYPE_LABELS = {
   food_bank: "Food bank / hub",
@@ -46,11 +51,23 @@ const state = {
   msgView: /** @type {'inbox' | 'sent' | 'all'} */ ("inbox"),
   messages: /** @type {Array<{from: string; to: string; text: string; locationId: string; locationName: string; createdAt?: any}>} */ ([]),
   sendingMessage: false,
+  /** Firestore keys only; missing key means use static JSON wishlist. */
+  wishlistById: /** @type {Record<string, string[]>} */ ({}),
+  savingWishlist: false,
 };
 
 function setMessageStatus(text, tone = "") {
   const el = document.getElementById("msg-status");
   if (!el) return;
+  el.textContent = text;
+  el.classList.remove("error", "ok");
+  if (tone) el.classList.add(tone);
+}
+
+function setPlaceSyncStatus(text, tone = "") {
+  const el = document.getElementById("place-sync-status");
+  if (!el) return;
+  el.hidden = !text;
   el.textContent = text;
   el.classList.remove("error", "ok");
   if (tone) el.classList.add(tone);
@@ -83,6 +100,13 @@ function effectiveStatus(loc) {
   return state.statusById[loc.id] || loc.status || "medium";
 }
 
+function effectiveWishlist(loc) {
+  if (Object.prototype.hasOwnProperty.call(state.wishlistById, loc.id)) {
+    return state.wishlistById[loc.id];
+  }
+  return loc.wishlist;
+}
+
 function roleLabel(role) {
   if (role === "donor") return "Donor";
   if (role === "organization") return "Organization";
@@ -94,7 +118,7 @@ function roleHintHtml(role) {
     return "<strong>Donor view:</strong> focus on high/critical sites. Open a location card for wishlist details and send direct notes to organizations.";
   }
   if (role === "organization") {
-    return "<strong>Organization view:</strong> open your site and update need status. Marker colors and alerts adjust immediately for demo testing.";
+    return "<strong>Organization view:</strong> open your site and update need status and wishlist. When Firebase is configured, changes sync for everyone in realtime (like Messages).";
   }
   return "<strong>Neighbor view:</strong> check map/list and alerts for stocked or open meal sites. Send direct questions to organizations.";
 }
@@ -182,23 +206,57 @@ function renderStatusControls(loc) {
     return '<p class="empty-state">Switch to Organization role to update this site\'s need status.</p>';
   }
   const current = effectiveStatus(loc);
+  const syncHint = isFirebaseConfigured
+    ? ""
+    : '<p class="empty-state" style="margin-top:0.5rem">Need status is saved only in this browser until Firebase is configured.</p>';
   return `
     <div class="status-controls" data-status-controls="${escapeAttr(loc.id)}">
       ${Object.entries(STATUS_META)
         .map(([key, meta]) => `<button type="button" data-status="${key}" class="${current === key ? "active" : ""}">${meta.label}</button>`)
         .join("")}
     </div>
+    ${syncHint}
   `;
+}
+
+function renderWishlistSection(loc) {
+  const wish = effectiveWishlist(loc).map((w) => `<li>${escapeHtml(w)}</li>`).join("");
+  if (state.role !== "organization") {
+    return `
+    <section>
+      <h3>Current wishlist</h3>
+      <ul>${wish}</ul>
+    </section>`;
+  }
+  if (!isFirebaseConfigured) {
+    return `
+    <section>
+      <h3>Current wishlist</h3>
+      <ul>${wish}</ul>
+      <p class="empty-state">Add Firebase in <code>js/firebase-config.js</code> to edit the wishlist for everyone (shared updates, like Messages).</p>
+    </section>`;
+  }
+  const body = effectiveWishlist(loc).join("\n");
+  return `
+    <section>
+      <h3>Wishlist (syncs for everyone)</h3>
+      <p class="empty-state" style="margin:0 0 0.35rem;font-size:0.8rem">One item per line.</p>
+      <div class="wishlist-edit">
+        <label for="wishlist-edit-body">Items needed</label>
+        <textarea id="wishlist-edit-body" placeholder="Canned protein&#10;Diapers">${escapeHtml(body)}</textarea>
+        <button type="button" id="wishlist-save-btn">Save wishlist</button>
+      </div>
+    </section>`;
 }
 
 function renderDetail(loc) {
   const el = document.getElementById("detail");
   if (!loc) {
+    setPlaceSyncStatus("", "");
     el.innerHTML = '<p class="empty-state">Select a location on the list or map.</p>';
     return;
   }
   const status = effectiveStatus(loc);
-  const wish = loc.wishlist.map((w) => `<li>${escapeHtml(w)}</li>`).join("");
   el.innerHTML = `
     <h2>${escapeHtml(loc.name)}</h2>
     <div class="sub">${escapeHtml(loc.address)} · ${escapeHtml(loc.phone)}</div>
@@ -215,10 +273,7 @@ function renderDetail(loc) {
       <h3>Website</h3>
       <p style="margin:0;font-size:0.9rem"><a href="${escapeAttr(loc.website)}" target="_blank" rel="noopener noreferrer">${escapeHtml(loc.website)}</a></p>
     </section>
-    <section>
-      <h3>Current wishlist</h3>
-      <ul>${wish}</ul>
-    </section>
+    ${renderWishlistSection(loc)}
     <section>
       <h3>Notes</h3>
       <p style="margin:0;font-size:0.85rem;color:var(--muted)">${escapeHtml(loc.notes)}</p>
@@ -228,17 +283,38 @@ function renderDetail(loc) {
   const box = el.querySelector("[data-status-controls]");
   if (box) {
     box.querySelectorAll("button[data-status]").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", async () => {
         const next = btn.dataset.status;
         if (!next || !STATUS_META[next]) return;
-        state.statusById[loc.id] = /** @type {keyof STATUS_META} */ (next);
-        saveStatusOverrides();
-        updateMarkerStyle(loc.id);
-        renderList();
-        renderDetail(loc);
-        renderAlerts();
+        if (isFirebaseConfigured) {
+          setPlaceSyncStatus("Saving need status…", "");
+          try {
+            await setDoc(
+              doc(db, ...LOCATION_OVERRIDES),
+              { statusById: { [loc.id]: next }, updatedAt: serverTimestamp() },
+              { merge: true }
+            );
+            setPlaceSyncStatus("Need status updated for everyone.", "ok");
+          } catch (error) {
+            console.error(error);
+            setPlaceSyncStatus("Could not save need status. Check Firestore rules.", "error");
+          }
+        } else {
+          state.statusById[loc.id] = /** @type {keyof STATUS_META} */ (next);
+          saveStatusOverrides();
+          updateMarkerStyle(loc.id);
+          renderList();
+          renderDetail(loc);
+          renderAlerts();
+        }
       });
     });
+  }
+
+  const saveWishBtn = document.getElementById("wishlist-save-btn");
+  const wishTa = document.getElementById("wishlist-edit-body");
+  if (saveWishBtn && wishTa && state.role === "organization" && isFirebaseConfigured) {
+    saveWishBtn.addEventListener("click", () => saveWishlistForLocation(loc, wishTa, saveWishBtn));
   }
 }
 
@@ -300,7 +376,7 @@ function buildAlerts() {
   if (state.role === "donor") {
     visible
       .filter((loc) => ["critical", "high"].includes(effectiveStatus(loc)))
-      .forEach((loc) => alerts.push({ text: `${loc.name} is ${STATUS_META[effectiveStatus(loc)].label.toLowerCase()}. Priority items: ${loc.wishlist.slice(0, 2).join(", ")}.`, stock: false }));
+      .forEach((loc) => alerts.push({ text: `${loc.name} is ${STATUS_META[effectiveStatus(loc)].label.toLowerCase()}. Priority items: ${effectiveWishlist(loc).slice(0, 2).join(", ")}.`, stock: false }));
   } else if (state.role === "need") {
     visible
       .filter((loc) => ["stable", "medium"].includes(effectiveStatus(loc)))
@@ -495,6 +571,62 @@ function setupRoleSwitch() {
   });
 }
 
+function applyLocationOverridesFromServer(data) {
+  const d = data && typeof data === "object" ? data : {};
+  const s = d.statusById;
+  const w = d.wishlistById;
+  state.statusById =
+    s && typeof s === "object" ? /** @type {Record<string, keyof STATUS_META>} */ ({ ...s }) : {};
+  state.wishlistById = w && typeof w === "object" ? { ...w } : {};
+}
+
+/** @param {{ id: string }} loc */
+async function saveWishlistForLocation(loc, textarea, saveBtn) {
+  if (state.savingWishlist || !isFirebaseConfigured) return;
+  state.savingWishlist = true;
+  saveBtn.disabled = true;
+  setPlaceSyncStatus("Saving wishlist…", "");
+  const lines = textarea.value
+    .split(/\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  try {
+    await setDoc(
+      doc(db, ...LOCATION_OVERRIDES),
+      { wishlistById: { [loc.id]: lines }, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    setPlaceSyncStatus("Wishlist updated for everyone.", "ok");
+  } catch (error) {
+    console.error(error);
+    setPlaceSyncStatus("Could not save wishlist. Check Firestore rules.", "error");
+  } finally {
+    state.savingWishlist = false;
+    saveBtn.disabled = false;
+  }
+}
+
+function setupLocationOverridesRealtime() {
+  if (!isFirebaseConfigured) return;
+
+  const ref = doc(db, ...LOCATION_OVERRIDES);
+  onSnapshot(
+    ref,
+    (snap) => {
+      applyLocationOverridesFromServer(snap.exists ? snap.data() : {});
+      renderList();
+      const selected = state.selectedId ? dataset.locations.find((x) => x.id === state.selectedId) : null;
+      renderDetail(selected || null);
+      dataset.locations.forEach((l) => updateMarkerStyle(l.id));
+      renderAlerts();
+    },
+    (error) => {
+      console.error(error);
+      setPlaceSyncStatus("Could not load shared place updates from Firestore.", "error");
+    }
+  );
+}
+
 function setupMessageRealtime() {
   const intro = document.getElementById("msg-intro");
   const sendBtn = document.getElementById("msg-send");
@@ -528,7 +660,8 @@ async function main() {
   dataset = await res.json();
 
   state.role = loadRole();
-  state.statusById = loadStatusOverrides();
+  state.statusById = isFirebaseConfigured ? {} : loadStatusOverrides();
+  state.wishlistById = {};
 
   renderRoleButtons();
   renderRoleHint();
@@ -543,6 +676,7 @@ async function main() {
   refreshMessageRoleOptions();
   populateMessageLocations();
   setupMessageRealtime();
+  setupLocationOverridesRealtime();
 
   document.getElementById("msg-send").addEventListener("click", postMessage);
 
