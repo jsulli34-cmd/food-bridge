@@ -13,6 +13,7 @@ import { db, isFirebaseConfigured } from "./firebase-config.js";
 
 const ROLE_KEY = "food-bridge-role";
 const STATUS_KEY = "food-bridge-status-overrides-v2";
+const INTRO_SEEN_KEY = "food-bridge-intro-seen-v1";
 
 /** Shared need + wishlist overrides (one doc, same pattern as messages collection). */
 const LOCATION_OVERRIDES = ["settings", "locationOverrides"];
@@ -35,6 +36,33 @@ const ROLE_TARGETS = {
   donor: "Donor",
   organization: "Organization",
   need: "Neighbor in need",
+};
+
+const ROLE_INSTRUCTIONS = {
+  donor: {
+    title: "Donor workflow",
+    steps: [
+      "Use the Places tab and prioritize sites marked Critical Need or High Need.",
+      "Open a location card to review wishlist items and operating hours.",
+      "Use Messages to coordinate drop-off timing directly with organizations.",
+    ],
+  },
+  organization: {
+    title: "Organization workflow",
+    steps: [
+      "Select your site from the Places list and keep need status up to date.",
+      "Update wishlist items so donors can respond to current priorities.",
+      "Monitor Alerts and Messages to coordinate demand changes quickly.",
+    ],
+  },
+  need: {
+    title: "Neighbor workflow",
+    steps: [
+      "Check Places and Alerts for currently stocked or active meal sites.",
+      "Review location hours and contact details before visiting.",
+      "Use Messages to ask organizations direct questions when needed.",
+    ],
+  },
 };
 
 /** @typedef {{ id: string; name: string; type: keyof TYPE_LABELS; address: string; coords: [number, number]; hours: string; website: string; phone: string; wishlist: string[]; notes: string; status: keyof STATUS_META }} Location */
@@ -80,6 +108,14 @@ function loadRole() {
 
 function saveRole(role) {
   sessionStorage.setItem(ROLE_KEY, role);
+}
+
+function markIntroSeen() {
+  localStorage.setItem(INTRO_SEEN_KEY, "1");
+}
+
+function hasSeenIntro() {
+  return localStorage.getItem(INTRO_SEEN_KEY) === "1";
 }
 
 function loadStatusOverrides() {
@@ -551,24 +587,76 @@ function setupTabs() {
   });
 }
 
+function applyRole(role) {
+  if (role !== "donor" && role !== "organization" && role !== "need") return;
+  state.role = role;
+  saveRole(role);
+  renderRoleButtons();
+  renderRoleHint();
+  refreshMessageRoleOptions();
+  renderAlerts();
+  renderMessages();
+  if (state.selectedId) {
+    const loc = dataset.locations.find((x) => x.id === state.selectedId);
+    renderDetail(loc || null);
+  }
+}
+
 function setupRoleSwitch() {
   document.querySelectorAll(".role-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const role = btn.dataset.role;
-      if (role !== "donor" && role !== "organization" && role !== "need") return;
-      state.role = role;
-      saveRole(role);
-      renderRoleButtons();
-      renderRoleHint();
-      refreshMessageRoleOptions();
-      renderAlerts();
-      renderMessages();
-      if (state.selectedId) {
-        const loc = dataset.locations.find((x) => x.id === state.selectedId);
-        renderDetail(loc || null);
-      }
+      applyRole(btn.dataset.role);
     });
   });
+}
+
+function renderOnboarding() {
+  const stepBox = document.getElementById("onboarding-steps");
+  if (!stepBox) return;
+  document.querySelectorAll(".onboarding-role-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.introRole === state.role);
+  });
+  const data = ROLE_INSTRUCTIONS[state.role];
+  stepBox.innerHTML = `
+    <p><strong>${data.title}:</strong></p>
+    <ul>${data.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
+  `;
+}
+
+function setupOnboardingModal() {
+  const modal = document.getElementById("onboarding-modal");
+  const closeBtn = document.getElementById("onboarding-close");
+  const startBtn = document.getElementById("onboarding-start");
+  const openBtn = document.getElementById("open-onboarding");
+  if (!modal || !closeBtn || !startBtn || !openBtn) return;
+
+  const openModal = () => {
+    modal.hidden = false;
+    renderOnboarding();
+  };
+  const closeModal = () => {
+    modal.hidden = true;
+    markIntroSeen();
+  };
+
+  closeBtn.addEventListener("click", closeModal);
+  startBtn.addEventListener("click", closeModal);
+  openBtn.addEventListener("click", openModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !modal.hidden) closeModal();
+  });
+
+  document.querySelectorAll(".onboarding-role-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyRole(btn.dataset.introRole);
+      renderOnboarding();
+    });
+  });
+
+  if (!hasSeenIntro()) openModal();
 }
 
 function applyLocationOverridesFromServer(data) {
@@ -675,6 +763,7 @@ async function main() {
   setupMessageViewButtons();
   refreshMessageRoleOptions();
   populateMessageLocations();
+  setupOnboardingModal();
   setupMessageRealtime();
   setupLocationOverridesRealtime();
 

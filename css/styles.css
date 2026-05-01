@@ -55,6 +55,15 @@ header.app-header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
   cursor: pointer;
 }
 .role-btn.active { background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
+.help-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  color: var(--ink);
+}
 
 .layout { display: grid; grid-template-columns: minmax(280px, 390px) 1fr; min-height: calc(100vh - 56px); }
 @media (max-width: 900px) {
@@ -249,3 +258,94 @@ header.app-header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
 .empty-state { font-size: 0.85rem; color: var(--muted); }
 footer.note { font-size: 0.72rem; color: var(--muted); padding: 0.5rem 1.25rem 1rem; }
 .leaflet-container { font-family: var(--font); }
+
+.onboarding-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1200;
+}
+.onboarding-modal[hidden] { display: none; }
+.onboarding-card {
+  width: min(680px, 100%);
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 1rem 1rem 0.85rem;
+  position: relative;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+}
+.onboarding-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.onboarding-card h2 {
+  margin: 0.15rem 0 0.4rem;
+  font-size: 1.15rem;
+}
+.onboarding-subtitle {
+  margin: 0 0 0.8rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.onboarding-role-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+}
+.onboarding-role-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0.42rem 0.75rem;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+.onboarding-role-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.onboarding-steps {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem;
+  margin-bottom: 0.8rem;
+}
+.onboarding-steps p {
+  margin: 0 0 0.4rem;
+  font-size: 0.86rem;
+}
+.onboarding-steps ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.83rem;
+}
+.onboarding-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.primary-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.48rem 0.95rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>South Bend Food Bridge — Beta</title>
+    <title>South Bend Food Bridge</title>
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -15,14 +15,13 @@
   <body>
     <header class="app-header">
       <h1>South Bend Food Bridge</h1>
-      <p class="tagline">
-        Beta: verified South Bend partners, need-status map signals, and role-to-role messaging.
-      </p>
+      <p class="tagline">Verified South Bend partners, live need-status map signals, and role-to-role messaging.</p>
       <div class="role-bar" role="group" aria-label="I am using this app as">
         <span>I am</span>
         <button type="button" class="role-btn" data-role="donor">A donor</button>
         <button type="button" class="role-btn" data-role="organization">An organization</button>
         <button type="button" class="role-btn" data-role="need">In need of food</button>
+        <button type="button" id="open-onboarding" class="help-btn" aria-haspopup="dialog">How to use</button>
       </div>
     </header>
 
@@ -49,9 +48,7 @@
           </div>
 
           <div id="tab-messages" class="tab-panel" role="tabpanel" hidden>
-            <p class="empty-state" id="msg-intro">
-              Beta inbox: direct messages are filtered by role and sync in realtime when Firebase is configured.
-            </p>
+            <p class="empty-state" id="msg-intro">Direct messages are filtered by role and sync in realtime when Firebase is configured.</p>
             <div class="msg-toolbar" id="msg-toolbar">
               <button type="button" class="chip on" data-view="inbox">Inbox</button>
               <button type="button" class="chip" data-view="sent">Sent</button>
@@ -81,9 +78,24 @@
       </main>
     </div>
 
-    <footer class="note">
-      Beta for class testing — partner details are real organizations but hours and contacts should still be re-verified before public release.
-    </footer>
+    <footer class="note">Partner details are real organizations, but hours and contacts should still be re-verified before visiting.</footer>
+
+    <div id="onboarding-modal" class="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title" hidden>
+      <div class="onboarding-card">
+        <button type="button" id="onboarding-close" class="onboarding-close" aria-label="Close instructions">&times;</button>
+        <h2 id="onboarding-title">Welcome to South Bend Food Bridge</h2>
+        <p class="onboarding-subtitle">Pick your role to personalize your dashboard and see quick instructions.</p>
+        <div class="onboarding-role-grid" role="group" aria-label="Choose your role">
+          <button type="button" class="onboarding-role-btn" data-intro-role="donor">Donor</button>
+          <button type="button" class="onboarding-role-btn" data-intro-role="organization">Organization</button>
+          <button type="button" class="onboarding-role-btn" data-intro-role="need">Neighbor in need</button>
+        </div>
+        <div id="onboarding-steps" class="onboarding-steps"></div>
+        <div class="onboarding-actions">
+          <button type="button" id="onboarding-start" class="primary-btn">Start exploring</button>
+        </div>
+      </div>
+    </div>
 
     <style>
       .sr-only {
